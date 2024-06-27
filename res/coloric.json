@@ -1,0 +1,22 @@
+{
+    "input cht file":           "layout.cht",
+    "input cie file":           "reference.cie",
+    "output image file":        "cropped_chart.tif",
+    "feducial marks file":      "fiducial_marks.txt",
+    "output generate file":     "generate.bat",
+    "scanin":                   "scanin",
+    "dcamprof":                 "dcamprof",
+    "dcamprof opt json":        "make-profile -g layout.json",
+    "dcamprof opt dcp":         "make-dcp",
+    "output ti3 file":          "scanin_results.ti3",
+    "output json file":         "color_profile.json",
+    "calibration illuminant":   "D50",
+    "output dcp file":          "color_profile.dcp",
+    "unique camera name":       "<Make> <Model>",
+    "profile name":             "User",
+    "number of crops":          1,
+    "label font":               "Arial",
+    "label font size":          26,
+    "max process image width":  2048,
+    "max process image height": 2048
+}
