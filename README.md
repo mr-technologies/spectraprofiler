@@ -1,3 +1,5 @@
+![screenshot](screenshot.jpg)
+
 # `spectraprofiler`
 
 `spectraprofiler` application implements a workflow to create DNG color profiles (DCP), that can be used together with IFF SDK.
