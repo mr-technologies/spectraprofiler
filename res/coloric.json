@@ -7,7 +7,7 @@
     "scanin":                   "scanin",
     "dcamprof":                 "dcamprof",
     "dcamprof opt json":        "make-profile -g layout.json",
-    "dcamprof opt dcp":         "make-dcp",
+    "dcamprof opt dcp":         "make-dcp -o standard",
     "output ti3 file":          "scanin_results.ti3",
     "output json file":         "color_profile.json",
     "calibration illuminant":   "D50",
