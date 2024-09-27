@@ -1,6 +1,7 @@
 // std
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <ctime>
 #include <exception>
@@ -162,6 +163,9 @@ int main()
     auto buffer_mutexes = std::vector<std::mutex>(total_chains);
     auto pending_buffers = std::vector<std::unique_ptr<Mat>>(total_chains);
     auto unused_buffer_lists = std::vector<std::forward_list<std::unique_ptr<Mat>>>(total_chains);
+    std::condition_variable render_cond;
+    std::mutex render_mutex;
+    bool render_requested = false;
     for(size_t i = 0; i < total_chains; ++i)
     {
         for(int j = 0; j < 3; ++j) //one buffer currently rendering, one buffer already filled, one buffer currently filling
@@ -208,6 +212,11 @@ int main()
                     unused_buffer_list.push_front(std::move(pending_buffer));
                 }
             }
+            {
+                std::lock_guard<std::mutex> render_lock(render_mutex);
+                render_requested = true;
+            }
+            render_cond.notify_one();
         };
         const auto& chain_handle = chain_handles[i];
         iff_set_export_callback(chain_handle, "exporter",
@@ -236,6 +245,10 @@ int main()
                 static auto buffers  = std::vector<cv::ogl::Buffer>   (total_chains);
                 static auto gpumats  = std::vector<cv::cuda::GpuMat>  (total_chains);
 #endif
+                {
+                    std::lock_guard<std::mutex> render_lock(render_mutex);
+                    render_requested = false;
+                }
                 for(size_t i = 0; i < total_chains; ++i)
                 {
                     std::unique_ptr<Mat> pending_buffer;
@@ -438,6 +451,10 @@ int main()
         }
         if(rendering)
         {
+            {
+                std::unique_lock<std::mutex> render_lock(render_mutex);
+                render_cond.wait_for(render_lock, std::chrono::seconds(1), [&](){ return render_requested; });
+            }
             cv::updateWindow(window_name);
         }
     }
