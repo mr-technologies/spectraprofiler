@@ -51,7 +51,7 @@ namespace
 {
     using wb_promise = std::promise<nlohmann::json>;
     std::unique_ptr<wb_promise> wb_ptr;
-    void wb_handler(const char* const params)
+    void wb_handler(const char* const params, void*)
     {
         const auto j = nlohmann::json::parse(params);
         wb_ptr->set_value(j["cam"]["wb"]);
@@ -59,7 +59,7 @@ namespace
 
     using written_promise = std::promise<bool>;
     std::unique_ptr<written_promise> written_ptr;
-    void written_handler(const char* const callback_data)
+    void written_handler(const char* const callback_data, void*)
     {
         const auto j = nlohmann::json::parse(callback_data);
         written_ptr->set_value(j["success"].get<bool>());
@@ -130,12 +130,13 @@ int main()
     for(const auto& chain_config : *it_chains)
     {
         const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
-                [](const char* const element_name, const int error_code)
-                {
-                    std::ostringstream message;
-                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-                });
+                                                   [](const char* element_name, int error_code, void*)
+                                                   {
+                                                       std::ostringstream message;
+                                                       message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                                                       iff_log(IFF_LOG_LEVEL_ERROR, "spectraprofiler", message.str().c_str());
+                                                   },
+                                                   nullptr);
         chain_handles.push_back(chain_handle);
     }
     const auto total_chains = chain_handles.size();
@@ -183,7 +184,7 @@ int main()
             {
                 std::ostringstream message;
                 message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
-                iff_log(IFF_LOG_LEVEL_WARNING, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_WARNING, "spectraprofiler", message.str().c_str());
                 return;
             }
             #ifdef IMAGE_MONO
@@ -226,7 +227,7 @@ int main()
                     (*export_function)(data, size, metadata);
                 },
                 &export_callbacks[i]);
-        iff_set_callback(chain_handle, "writer/frame_written_callback", written_handler);
+        iff_set_callback(chain_handle, "writer/frame_written_callback", written_handler, nullptr);
         iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
     }
 
@@ -305,7 +306,7 @@ int main()
             },
             &render_callback);
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
+    iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Press Esc to terminate the program");
     bool size_set = WINDOW_FULLSCREEN;
     bool rendering = true;
     float cur_ev = 0;
@@ -316,12 +317,12 @@ int main()
         {
             if((keycode & 0xff) == 27)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Esc key was pressed, stopping the program");
                 break;
             }
             else if((keycode & 0xff) == 8)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Backspace key was pressed, disabling acquisition");
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Backspace key was pressed, disabling acquisition");
                 for(const auto chain_handle : chain_handles)
                 {
                     iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "off"}}}}.dump().c_str());
@@ -329,7 +330,7 @@ int main()
             }
             else if((keycode & 0xff) == 13)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Enter key was pressed, enabling acquisition");
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Enter key was pressed, enabling acquisition");
                 for(const auto chain_handle : chain_handles)
                 {
                     iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
@@ -339,12 +340,12 @@ int main()
             {
                 if(rendering)
                 {
-                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, pausing rendering");
+                    iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Space key was pressed, pausing rendering");
                     rendering = false;
                 }
                 else
                 {
-                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, resuming rendering");
+                    iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Space key was pressed, resuming rendering");
                     rendering = true;
                 }
             }
@@ -353,7 +354,7 @@ int main()
                 cur_ev -= EV_STEP;
                 std::ostringstream message;
                 message << "'1' was pressed, decreasing exposure by " << EV_STEP << " EV, setting `ev_correction` to: " << cur_ev;
-                iff_log(IFF_LOG_LEVEL_INFO, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", message.str().c_str());
                 for(const auto chain_handle : chain_handles)
                 {
                     iff_set_params(chain_handle, nlohmann::json{{"autoctrl", {{"ev_correction", cur_ev}}}}.dump().c_str());
@@ -364,7 +365,7 @@ int main()
                 cur_ev += EV_STEP;
                 std::ostringstream message;
                 message << "'2' was pressed, increasing exposure by " << EV_STEP << " EV, setting `ev_correction` to: " << cur_ev;
-                iff_log(IFF_LOG_LEVEL_INFO, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", message.str().c_str());
                 for(const auto chain_handle : chain_handles)
                 {
                     iff_set_params(chain_handle, nlohmann::json{{"autoctrl", {{"ev_correction", cur_ev}}}}.dump().c_str());
@@ -372,11 +373,11 @@ int main()
             }
             else if((keycode & 0xff) == 9)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Tab key was pressed, creating color profile");
+                iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", "Tab key was pressed, creating color profile");
                 for(const auto chain_handle : chain_handles)
                 {
                     wb_ptr.reset(new wb_promise);
-                    iff_get_params(chain_handle, R"({"cam": {"params": ["wb"]}})", wb_handler);
+                    iff_get_params(chain_handle, R"({"cam": {"params": ["wb"]}})", wb_handler, nullptr);
                     const auto wb = wb_ptr->get_future().get();
                     wb_ptr.reset();
                     const auto dcp_output_dir = iso8601_timestamp();
@@ -399,16 +400,16 @@ int main()
                         {
                             std::ostringstream message;
                             message << "Color profile successfully written to: " << dcp_output_dir << "/color_profile.dcp";
-                            iff_log(IFF_LOG_LEVEL_INFO, message.str().c_str());
+                            iff_log(IFF_LOG_LEVEL_INFO, "spectraprofiler", message.str().c_str());
                         }
                         else
                         {
-                            iff_log(IFF_LOG_LEVEL_ERROR, "Failed to create a color profile!");
+                            iff_log(IFF_LOG_LEVEL_ERROR, "spectraprofiler", "Failed to create a color profile!");
                         }
                     }
                     else
                     {
-                        iff_log(IFF_LOG_LEVEL_ERROR, "Failed to write TIFF file!");
+                        iff_log(IFF_LOG_LEVEL_ERROR, "spectraprofiler", "Failed to write TIFF file!");
                     }
                 }
             }
@@ -416,7 +417,7 @@ int main()
             {
                 std::ostringstream message;
                 message << "Key press ignored, code: " << keycode;
-                iff_log(IFF_LOG_LEVEL_DEBUG, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_DEBUG, "spectraprofiler", message.str().c_str());
             }
         }
         if(!size_set)
