@@ -37,4 +37,4 @@ cp dcamprof-1.0.6/data-examples/cc24_ref-new.cie ../../res/reference.cie
 cp dcamprof-1.0.6/data-examples/cc24-layout.json ../../res/layout.json
 
 echo "Application dependencies (except for OpenCV) has been successfully installed."
-echo "You can now remove ${PWD}/dcamprof."
+echo "You can now remove ${PWD}."
