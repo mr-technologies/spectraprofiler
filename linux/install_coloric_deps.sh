@@ -14,8 +14,11 @@ sudo apt install -y \
 	libtiff-dev \
 	python3-pil.imagetk \
 	python3-pip
-pip3 install --upgrade pip
-pip3 install --upgrade colormath
+if ! sudo apt install -y python3-colormath
+then
+	pip3 install --upgrade pip
+	pip3 install --upgrade colormath
+fi
 
 mkdir dcamprof
 cd dcamprof
